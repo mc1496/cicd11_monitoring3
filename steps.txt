@@ -76,6 +76,72 @@ but before apply ansible to remote server I really need to run
 set_ec2_ro_keys.sh set
 anyway
 -----
+Helpful:
+https://becloudready.com/automate-prometheus-deployment-with-ansible/
+https://medium.com/techno101/how-to-send-a-mail-using-prometheus-alertmanager-7e880a3676db
+
+https://codewizardly.com/prometheus-on-aws-ec2-part1/
+https://codewizardly.com/prometheus-on-aws-ec2-part2
+https://codewizardly.com/prometheus-on-aws-ec2-part3
+https://codewizardly.com/prometheus-on-aws-ec2-part4
+
+we follow part4 in this cicd11-monitoring3
+
+https://prometheus.io/download/
+
+https://github.com/prometheus/alertmanager/releases/download/v0.24.0/alertmanager-0.24.0.linux-amd64.tar.gz
+
+before do setup in ansible is better to download and check what we have
+max@m20:~/Downloads/alertmanager-0.24.0.linux-amd64$ ls
+alertmanager  alertmanager.yml  amtool  LICENSE  NOTICE
+
+https://prometheus.io/docs/alerting/latest/configuration/
+
+maxx.bovo@gmail.com
+###########################################
+Phase4: Configure Prometheus to discover EC2 instances automatically+ALERTMANAGER
+ ./set_ec2_ro_keys.sh set
+./set_alertmanager_emails_info.sh set
+
+./deploy.sh xam-ec2-mon1 ec2-prometheus.yml ec2-prometheus.json
+ec2-3-88-66-234.compute-1.amazonaws.com to inventory-ec2-prometheus.txt
+
+./deploy.sh xam-ec2-nodex1 ec2-node-exporter.yml ec2-node-exporter.json
+install nodex on both prometheus server and the nodex sample ec2
+ec2-3-88-66-234.compute-1.amazonaws.com to inventory-ec2-node-exporter.txt
+ec2-3-87-107-181.compute-1.amazonaws.com
+
+no need to add it to promethues, it wii discover all ec2 with its IAM-user-credintial
+
+ansible-playbook -i inventory-ec2-node-exporter.txt ansible-ec2-node-exporter.yml --private-key=xam-ec2-key-cicd.pem
+ansible-playbook -i inventory-ec2-prometheus.txt ansible-ec2-prometheus.yml --private-key=xam-ec2-key-cicd.pem
+
+ec2-44-204-51-188.compute-1.amazonaws.com:9090
+voilaaaaa
+
+./delete.sh xam-ec2-nodex1
+./delete.sh xam-ec2-mon1
+
+
+maybe in need one more sudo systemctl restart prometheus
+
+
+
+ALL STEPS ARE here
+./run_all.sh set
+stop node exporter instance
+almost immedially we see in
+prometheus server alert tab (port 9090)
+
+ in 3 min we should see alert anmd email
+ alert in alert manager port 9093
+ and email
+ if we restart node exporter ec2 instance alert will be cleared
+ ./run_all.sh clear
+
+
+
+
 
 
 

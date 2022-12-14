@@ -119,3 +119,9 @@
     state: started
     enabled: yes
 ###########################
+- name: Template rules.yml to /etc/prometheus
+  ansible.builtin.template:
+    src: files/rules.yml
+    dest: /etc/prometheus/rules.yml
+    owner: prometheus
+    group: prometheus

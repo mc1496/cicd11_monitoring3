@@ -1,0 +1,107 @@
+---
+#assumed it's already done during promethues server installation
+#or we may do alert manager in the same yml setup of server setup
+# - name: Create prometheus user
+#   ansible.builtin.user:
+#     name: prometheus
+#     state: present
+#     shell: /bin/false
+#     system: no
+#     createhome: no
+
+- name: Create directory /var/lib/alertmanager
+  ansible.builtin.file:
+    path: "{{item}}"
+    state: directory
+    owner: prometheus
+    group: prometheus
+  with_items:
+    - /var/lib/alertmanager
+
+- name: Download alertmanager-0.24.0 with check (sha256)
+  ansible.builtin.get_url:
+    url: https://github.com/prometheus/alertmanager/releases/download/v0.24.0/alertmanager-0.24.0.linux-amd64.tar.gz
+    dest: /home/ubuntu
+    checksum: sha256:6fa982232ae7be5524f5b3cd4e90b7c6a75086368200c917644eaa3e806555dc
+
+#absolutly what I wanted:
+#In one shot unzip the content (without top folder) to dest folder
+#and set permissions for all files and folder to what I wanted
+- name: Unarchive alertmanager-0.24.0 that is already on the remote machine
+  ansible.builtin.unarchive:
+    src: /home/ubuntu/alertmanager-0.24.0.linux-amd64.tar.gz
+    dest: /home/ubuntu/
+    remote_src: yes
+    owner: prometheus
+    group: prometheus
+    #extra_opts: [--strip-components=1]
+
+- name: Remove/Delete alertmanager-0.24.0.linux-amd64.tar.gz
+  ansible.builtin.file:
+    path: /home/ubuntu/alertmanager-0.24.0.linux-amd64.tar.gz
+    state: absent
+
+################################################
+
+- name: Copy file alertmanager to usr-local-bin
+  ansible.builtin.copy:
+    src: /home/ubuntu/alertmanager-0.24.0.linux-amd64/alertmanager
+    dest: /usr/local/bin/
+    owner: prometheus
+    group: prometheus
+    mode: '0755'
+    remote_src: yes
+  #become_user: root
+
+- name: Copy file amtool to usr-local-bin
+  ansible.builtin.copy:
+    src: /home/ubuntu/alertmanager-0.24.0.linux-amd64/amtool
+    dest: /usr/local/bin/
+    owner: prometheus
+    group: prometheus
+    mode: '0755'
+    remote_src: yes
+  #become_user: root
+
+- name: Copy (bkp) original alertmanager.yml to  /etc/prometheus/alertmanager_org.yml
+  ansible.builtin.copy:
+    src: /home/ubuntu/alertmanager-0.24.0.linux-amd64/alertmanager.yml
+    dest: /etc/prometheus/alertmanager_org.yml
+    owner: prometheus
+    group: prometheus
+    mode: '0744'
+    remote_src: yes
+
+########################################
+- name: Template alertmanager.yml to /etc/prometheus
+  ansible.builtin.template:
+    src: files/alertmanager.yml
+    dest: /etc/prometheus/alertmanager.yml
+    owner: prometheus
+    group: prometheus
+
+# - name: Template rules.yml to /etc/prometheus
+#   ansible.builtin.template:
+#     src: files/rules.yml
+#     dest: /etc/prometheus/rules.yml
+#     owner: prometheus
+#     group: prometheus
+
+- name: Template alertmanager.service to /etc/systemd/system/alertmanager.service
+  ansible.builtin.template:
+    src: files/alertmanager.service
+    dest: /etc/systemd/system/alertmanager.service
+    owner: prometheus
+    group: prometheus
+
+# sudo systemctl daemon-reload
+# sudo systemctl start prometheus
+# sudo systemctl status prometheus
+# sudo systemctl enable prometheus
+- name: systemctl daemon-reload,  start alertmanager, enable alertmanager
+  ansible.builtin.systemd:
+    daemon_reload: yes
+    name: alertmanager
+    state: started
+    enabled: yes
+###########################

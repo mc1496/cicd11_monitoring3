@@ -15,3 +15,4 @@ elif [[ $1 = clear ]];then
 else
     echo "set or clear required as one mandatory arg"
 fi
+tail -n 5 $YML
