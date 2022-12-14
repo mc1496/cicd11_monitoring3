@@ -1,0 +1,30 @@
+[
+	{
+		"ParameterKey": "EnvironmentName",
+		"ParameterValue": "XAM"
+	},
+	{
+		"ParameterKey": "EC2AMI",
+		"ParameterValue": "ami-08c40ec9ead489470"
+	},
+	{
+		"ParameterKey": "EC2KeyName",
+		"ParameterValue": "xam-ec2-key-cicd"
+	},
+	{
+		"ParameterKey": "EC2InstanceType",
+		"ParameterValue": "t2.micro"
+	},
+	{
+		"ParameterKey": "PortPrometheus",
+		"ParameterValue": "9090"
+	},
+	{
+		"ParameterKey": "PortPrometheusNodeExporter",
+		"ParameterValue": "9100"
+	},
+	{
+		"ParameterKey": "PortPrometheusAlertmanager",
+		"ParameterValue": "9093"
+	}
+]

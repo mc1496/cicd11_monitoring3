@@ -1,0 +1,121 @@
+---
+- name: Create prometheus user
+  ansible.builtin.user:
+    name: prometheus
+    state: present
+    shell: /bin/false
+    system: no
+    createhome: no
+#  become_user: root
+
+
+- name: Create directory
+  ansible.builtin.file:
+    path: "{{item}}"
+    state: directory
+    owner: prometheus
+    group: prometheus
+  with_items:
+    - /etc/prometheus
+    - /var/lib/prometheus
+
+####################
+# - name: Unarchive a file that needs to be downloaded
+#   ansible.builtin.unarchive:
+#     src: https://github.com/prometheus/prometheus/releases/download/v2.37.5/prometheus-2.37.5.linux-amd64.tar.gz
+#     dest: /home/ubuntu
+#     remote_src: yes
+#----------------------------
+
+- name: Download prometheus-2.37.5 LTS with check (sha256)
+  ansible.builtin.get_url:
+    url: https://github.com/prometheus/prometheus/releases/download/v2.37.5/prometheus-2.37.5.linux-amd64.tar.gz
+    dest: /home/ubuntu
+    checksum: sha256:a5824b2395a440caed8fda287bab6f91203ee765e623418ce452370285a6ce18
+
+#absolutly what I wanted:
+#In one shot unzip the content (without top folder) to dest folder
+#and set permissions for all files and folder to what I wanted
+- name: Unarchive prometheus-2.37.5 that is already on the remote machine
+  ansible.builtin.unarchive:
+    src: /home/ubuntu/prometheus-2.37.5.linux-amd64.tar.gz
+    dest: /etc/prometheus/
+    remote_src: yes
+    owner: prometheus
+    group: prometheus
+    extra_opts: [--strip-components=1]
+
+- name: Remove/Delete rometheus-2.37.5.linux-amd64.tar.gz
+  ansible.builtin.file:
+    path: /home/ubuntu/prometheus-2.37.5.linux-amd64.tar.gz
+    state: absent
+
+################################################
+
+- name: Copy file prometheus to usr-local-bin
+  ansible.builtin.copy:
+    src: /etc/prometheus/prometheus
+    dest: /usr/local/bin/
+    owner: prometheus
+    group: prometheus
+    mode: '0755'
+    remote_src: yes
+  #become_user: root
+
+#no harm to keep it here in etc, but we can remove it
+- name: Remove  prometheus from etc-prometheus
+  ansible.builtin.file:
+    path:  /etc/prometheus/prometheus
+    state: absent
+
+- name: Copy file promtool to usr-local-bin
+  ansible.builtin.copy:
+    src: /etc/prometheus/promtool
+    dest: /usr/local/bin/
+    owner: prometheus
+    group: prometheus
+    mode: '0755'
+    remote_src: yes
+  #become_user: root
+
+#no harm to keep it here in etc, but we can remove it
+- name: Remove promtool from etc-prometheus
+  ansible.builtin.file:
+    path:  /etc/prometheus/promtool
+    state: absent
+
+- name: Copy (backup) original prometheus.yml to  prometheus_org.yml
+  ansible.builtin.copy:
+    src: /etc/prometheus/prometheus.yml
+    dest: /etc/prometheus/prometheus_org.yml
+    owner: prometheus
+    group: prometheus
+    mode: '0744'
+    remote_src: yes
+
+########################################
+- name: Template prometheus.yml to /etc/prometheus
+  ansible.builtin.template:
+    src: files/prometheus.yml
+    dest: /etc/prometheus/prometheus.yml
+    owner: prometheus
+    group: prometheus
+
+- name: Template prometheus.service to /etc/systemd/system/prometheus.service
+  ansible.builtin.template:
+    src: files/prometheus.service
+    dest: /etc/systemd/system/prometheus.service
+    owner: prometheus
+    group: prometheus
+
+# sudo systemctl daemon-reload
+# sudo systemctl start prometheus
+# sudo systemctl status prometheus
+# sudo systemctl enable prometheus
+- name: systemctl daemon-reload,  start prometheus, enable prometheus
+  ansible.builtin.systemd:
+    daemon_reload: yes
+    name: prometheus
+    state: started
+    enabled: yes
+###########################

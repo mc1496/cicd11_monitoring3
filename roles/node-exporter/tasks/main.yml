@@ -1,0 +1,52 @@
+---
+- name: Create node_exporter user
+  ansible.builtin.user:
+    name: node_exporter
+    state: present
+    shell: /bin/false
+    system: no
+    createhome: no
+
+- name: Download node_exporter 1.5.0 with check (sha256)
+  ansible.builtin.get_url:
+    url: https://github.com/prometheus/node_exporter/releases/download/v1.5.0/node_exporter-1.5.0.linux-amd64.tar.gz
+    dest: /home/ubuntu
+    checksum: sha256:af999fd31ab54ed3a34b9f0b10c28e9acee9ef5ac5a5d5edfdde85437db7acbb
+
+#absolutly what I wanted:
+#In one shot unzip the content (without top folder) to dest folder
+#and set permissions for all files and folder to what I wanted
+- name: Unarchive node_exporter 1.5.0 that is already on the remote machine
+  ansible.builtin.unarchive:
+    src: /home/ubuntu/node_exporter-1.5.0.linux-amd64.tar.gz
+    dest: /usr/local/bin/
+    remote_src: yes
+    owner: node_exporter
+    group: node_exporter
+    mode: '0755'
+    extra_opts: [--strip-components=1]
+
+- name: Remove/Delete node_exporter-1.5.0.linux-amd64.tar.gz
+  ansible.builtin.file:
+    path: /home/ubuntu/node_exporter-1.5.0.linux-amd64.tar.gz
+    state: absent
+
+
+- name: Template node-exporter.service to /etc/systemd/system/node-exporter.service
+  ansible.builtin.template:
+    src: files/node-exporter.service
+    dest: /etc/systemd/system/node-exporter.service
+    owner: node_exporter
+    group: node_exporter
+
+# sudo systemctl daemon-reload
+# sudo systemctl start prometheus
+# sudo systemctl status prometheus
+# sudo systemctl enable prometheus
+- name: systemctl daemon-reload,  start node-exporter, enable node-exporter
+  ansible.builtin.systemd:
+    daemon_reload: yes
+    name: node-exporter
+    state: started
+    enabled: yes
+###########################

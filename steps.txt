@@ -1,0 +1,84 @@
+Phase-1: prometheus (only prometheus)
+1- max@m20:~/y/xCloudDevOps/cicd/cicd11_monitoring1$ ./deploy.sh xam-ec2-mon1 ec2-prometheus.yml ec2-prometheus.json
+
+2- copy XAM-EC2PublicDnsName-Prometheus Value to  inventory-ec2-prometheus.txt
+
+3- max@m20:~/y/xCloudDevOps/cicd/cicd11_monitoring1$ ansible-playbook -i inventory-ec2-prometheus.txt ansible-ec2-prometheus.yml --private-key=xam-ec2-key-cicd.pem
+
+4- in browser check XAM-EC2PublicDnsName-Prometheus Value:9090
+
+5- go to status service directory
+
+6- max@m20:~/y/xCloudDevOps/cicd/cicd11_monitoring1$ ./delete.sh xam-ec2-mon1
+--------------------------------------------------------------------------------
+Phase-2: prometheus + node-exporter (statically add ec2-with node-exporter tp prometues)
+./deploy.sh xam-ec2-mon1 ec2-prometheus.yml ec2-prometheus.json
+ec2-107-20-37-92.compute-1.amazonaws.com to inventory-ec2-prometheus.txt
+
+./deploy.sh xam-ec2-nodex1 ec2-node-exporter.yml ec2-node-exporter.json
+ec2-34-226-211-183.compute-1.amazonaws.com  to inventory-ec2-node-exporter.txt and
+under job_name: 'node_exporter' in /cicd11_monitoring2/roles/prometheus/tasks/main.yml
+
+ansible-playbook -i inventory-ec2-node-exporter.txt ansible-ec2-node-exporter.yml --private-key=xam-ec2-key-cicd.pem
+
+ansible-playbook -i inventory-ec2-prometheus.txt ansible-ec2-prometheus.yml --private-key=xam-ec2-key-cicd.pem
+
+ec2-107-20-37-92.compute-1.amazonaws.com:9090
+
+we can see two items under status service directory
+node_exporter
+prometheus
+
+./delete.sh xam-ec2-nodex1
+./delete.sh xam-ec2-mon1
+-----------------------------------------------------------------------
+Phase3: Configure Prometheus to discover EC2 instances automatically
+create a CLI AWS user with AWS EC2 ReadOnly Access, and
+in fact there are many service discovery options (not just AWS EC2)
+see https://github.com/prometheus/prometheus/tree/master/discovery
+change prometues.yml as
+global:
+  scrape_interval: 1s
+  evaluation_interval: 1s
+
+scrape_configs:
+  - job_name: 'node'
+    ec2_sd_configs:
+      - region: us-east-1
+        access_key: PUT_THE_ACCESS_KEY_HERE
+        secret_key: PUT_THE_SECRET_KEY_HERE
+        port: 9100
+
+./deploy.sh xam-ec2-mon1 ec2-prometheus.yml ec2-prometheus.json
+ec2-44-204-51-188.compute-1.amazonaws.com to inventory-ec2-prometheus.txt
+
+./deploy.sh xam-ec2-nodex1 ec2-node-exporter.yml ec2-node-exporter.json
+ec2-44-202-118-11.compute-1.amazonaws.com to inventory-ec2-node-exporter.txt
+
+no need to add it to promethues, it wii discover all ec2 with its IAM-user-credintial
+
+ansible-playbook -i inventory-ec2-node-exporter.txt ansible-ec2-node-exporter.yml --private-key=xam-ec2-key-cicd.pem
+
+ec2-44-204-51-188.compute-1.amazonaws.com:9090
+voilaaaaa
+
+./delete.sh xam-ec2-nodex1
+./delete.sh xam-ec2-mon1
+##############################
+Note we can use envsubst <test.yml
+to replace all env-var inside test.yml on the fly ${ENV_VAR} replace with corresponding Value
+or save the result to new file envsubst <test.yml> test_filled.yml
+see more info at https://skofgar.ch/dev/2020/08/how-to-quickly-replace-environment-variables-in-a-file/
+
+but here I wrote my own scrip as set_ec2_ro_keys.sh
+I just need to make sure use set_ec2_ro_keys.sh clean before commit to github
+but before apply ansible to remote server I really need to run
+set_ec2_ro_keys.sh set
+anyway
+-----
+
+
+
+
+
+

@@ -1,0 +1,84 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: >
+  Xam Yxar EC2-NodeExporter
+#
+Parameters:
+  EnvironmentName:
+    Description: will be prefixed to resource names
+    Type: String
+  EC2AMI:
+    Description: EC2 AMI to use
+    Type: String
+  EC2KeyName:
+    Description: EC2 SSH Key Name
+    Type: String
+  EC2InstanceType:
+    Description: EC2 InstanceType
+    Type: String
+  PortPrometheus:
+    Description: Prometheus port
+    Type: Number
+  PortPrometheusNodeExporter:
+    Description: Prometheus NodeExporter port
+    Type: Number
+  PortPrometheusAlertmanager:
+    Description: Prometheus Alertmanager port
+    Type: Number
+#
+Resources:
+  EC2SecGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow SSH from remote and Prometheus-related ports
+      SecurityGroupIngress:
+      - IpProtocol: tcp
+        FromPort: 22
+        ToPort: 22
+        CidrIp: 0.0.0.0/0
+      - IpProtocol: tcp
+        FromPort: !Ref PortPrometheus
+        ToPort: !Ref PortPrometheus
+        CidrIp: 0.0.0.0/0
+      - IpProtocol: tcp
+        FromPort: !Ref PortPrometheusNodeExporter
+        ToPort: !Ref PortPrometheusNodeExporter
+        CidrIp: 0.0.0.0/0
+      - IpProtocol: tcp
+        FromPort: !Ref PortPrometheusAlertmanager
+        ToPort: !Ref PortPrometheusAlertmanager
+        CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName}-EC2SecGroup-NodeExporter
+#let use any subnet in any AZ
+  EC2Inst:
+    Type: AWS::EC2::Instance
+    Properties:
+      KeyName: !Ref EC2KeyName
+      ImageId: !Ref EC2AMI
+      InstanceType: !Ref EC2InstanceType
+      SecurityGroups:
+        - !Ref EC2SecGroup
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName}-EC2-NodeExporter
+
+#Public DNSname of EC2 for SSH, and ....
+Outputs:
+  EC2PublicDnsName:
+    Description: A reference to the PublicDnsName of EC2Inst
+    Value: !GetAtt EC2Inst.PublicDnsName
+    Export:
+      Name: !Sub ${EnvironmentName}-EC2PublicDnsName-NodeExporter
+
+  # EC2PublicIp:
+  #   Description: A reference to the PublicIp of EC2Inst
+  #   Value: !GetAtt EC2Inst.PublicIp
+  #   Export:
+  #     Name: !Sub ${EnvironmentName}-EC2PublicIp
+
+  # EC2SecGroupID:
+  #   Description: A reference to the created EC2SecGroup ID for ssh to servers in private net
+  #   Value: !GetAtt EC2SecGroup.GroupId
+  #   Export:
+  #     Name: !Sub ${EnvironmentName}-EC2SecGroupID
